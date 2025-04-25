@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Birthday Quest</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- rain overlay -->
+  <div id="rain-container"></div>
+
+  <div class="game-container">
+    <header>
+      <h1>Solve to get a surprise</h1>
+      <div class="score">Moves: <span id="moves">0</span></div>
+    </header>
+    <div id="gameBoard" class="game-grid"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const imageFiles = Array.from({ length: 13 }, (_, i) => `${i + 1}.jpg`);
+      const gameBoard = document.getElementById('gameBoard');
+      const movesElement = document.getElementById('moves');
+      let moves = 0, flippedCards = [], matchedCards = [];
+
+      // build & shuffle
+      const gameCards = imageFiles.flatMap(img => [img, img, img]);
+      for (let i = gameCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [gameCards[i], gameCards[j]] = [gameCards[j], gameCards[i]];
+      }
+
+      // render cards
+      gameCards.forEach(imageFile => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="card-back"></div>
+            <div class="card-front">
+              <img src="assets/${imageFile}" alt="Card image">
+            </div>
+          </div>
+        `;
+        card.querySelector('img').addEventListener('error', e => {
+          e.target.style.backgroundColor = 'rgba(255,0,0,0.2)';
+        });
+        card.addEventListener('click', () => handleCardClick(card, imageFile));
+        gameBoard.appendChild(card);
+      });
+
+      function handleCardClick(card, type) {
+        if (
+          card.classList.contains('flipped') ||
+          matchedCards.includes(card) ||
+          flippedCards.length >= 3
+        ) return;
+
+        card.classList.add('flipped');
+        flippedCards.push({ card, type });
+
+        if (flippedCards.length === 3) {
+          moves++;
+          movesElement.textContent = moves;
+          const allMatch = flippedCards.every(c => c.type === flippedCards[0].type);
+          setTimeout(() => {
+            if (allMatch) {
+              flippedCards.forEach(c => matchedCards.push(c.card));
+            } else {
+              flippedCards.forEach(c => c.card.classList.remove('flipped'));
+            }
+            flippedCards = [];
+            checkGameOver();
+          }, 800);
+        }
+      }
+
+      function checkGameOver() {
+        if (matchedCards.length === gameCards.length) {
+          showWordRain();
+          setTimeout(() => window.location.reload(), 22000);
+        }
+      }
+
+      // word‐rain
+      function showWordRain() {
+        const container = document.getElementById('rain-container');
+        const words = [
+  'Поздравляю',  // "Congratulations" (direct translation)
+  'С Днём Рождения, Полина',  // "Happy Birthday Polina"  
+  '21',  // (kept as a number, as in the original)  
+  'Расти большой! 🌱',  // Literally "Grow big!" (a playful/affectionate wish)  
+  'Любви и счастья! 💖' ];
+        const lanes = Array.from({length:10},(_,i)=>i*10);
+        shuffle(lanes);
+        let laneIdx = 0, drops = 0, maxDrops = 150;
+
+        const iv = setInterval(() => {
+          if (drops++ >= maxDrops) return clearInterval(iv);
+          if (laneIdx >= lanes.length) {
+            shuffle(lanes);
+            laneIdx = 0;
+          }
+          const span = document.createElement('span');
+          span.className = 'rain-word';
+          span.textContent = words[drops % words.length];
+          span.style.left = (lanes[laneIdx++] + Math.random()*8) + '%';
+          span.style.fontSize = (1 + Math.random()*2) + 'rem';
+          span.style.color    = `var(--rain-color-${1 + Math.floor(Math.random()*5)})`;
+          span.style.fontFamily= `var(--rain-font-${1 + Math.floor(Math.random()*5)})`;
+          container.appendChild(span);
+          span.addEventListener('animationend', ()=>span.remove());
+        }, 100); // spawn twice as fast
+      }
+
+      function shuffle(a) {
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+      }
+    });
+  </script>
+</body>
+</html>
